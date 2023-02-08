@@ -1,45 +1,60 @@
 import datetime
 import json
-import logging
 import re
 
 import azure.functions as func
 import pytz
-from azure.storage.blob import BlobServiceClient
+
+from . import process, utils
+
+RES_MAPPING = {
+    "BI_MATU": 'material_use_trans',
+    "BI_ASSET": "asset",
+    "BI_INVE": "inventory",
+    "BI_ITEM": "item",
+    "BI_MATR": "material_receipt_trans",
+    "BI_WO": "work_order",
+    "BI_SERV": "services",
+    "BI_INVT": "inventory_trans",
+    "BI_INVB": "inventory_balance",
+    "BI_LOC": "location"
+}
+
+PATH_RAW = "spp/cmms_data_dev/raw"
+PATH_PROCESSED = "spp/cmms_data_dev/processed"
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     req_body = req.get_json()
 
+    # Extract requested data
     if isinstance(req_body, str):
         data = json.loads(req_body)
     elif isinstance(req_body, dict):
         data = req_body
 
-    # Establish 'filename'
+    # Extract res_name
     if 'responseInfo' not in data or 'href' not in data['responseInfo']:
         return func.HttpResponse("Field 'responseInfo' or 'responseInfo['href']' error", status_code=500)
 
-    res_name = re.findall(r"\/(BI_\w+)", data['responseInfo']['href'])[0]
+    res_name_ = re.findall(r"\/(BI_\w+)", data['responseInfo']['href'])[0]
+    res_name = RES_MAPPING[res_name_]
 
+    # Process data
+    processed = process.preprocess(data, res_name)
+
+    # Create 'filename'
     a = datetime.datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
     dt_s = a.strftime("%Y%m%d-%H%M%S")
-
     filename = f"{res_name}_{dt_s}.json"
 
-    # Establish connection
-    connection_string = "DefaultEndpointsProtocol=https;AccountName=spvbstoragedevv2;AccountKey=mnql8TSM53Myn/rHlSiVMTSpXz9zL1oUnv3U8tIvtVIsHRELVjMPjwRU2qj58V7w+zevlopk8X2vrqxqb+OSUA==;EndpointSuffix=core.windows.net"
-    container_name = f"spp/cmms_data_dev/{res_name}"
-    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-    blob_client = blob_service_client.get_blob_client(
-        container=container_name,
-        blob=filename
-    )
+    # Save raw data
+    path = f"{PATH_RAW}/{res_name}/{filename}"
+    utils.save_file(data, filename, path)
 
-    # Convert str to binary
-    data_encoded = bytes(json.dumps(data, indent=2, ensure_ascii=False), 'utf-8')
-
-    # Write to Azure Blob
-    blob_client.upload_blob(data_encoded, blob_type="BlockBlob", overwrite=True)
+    # Save processed data
+    for res_name, dat in processed.items():
+        path = f"{PATH_PROCESSED}/{res_name}/{filename}"
+        utils.save_file(dat, filename, path)
 
     return func.HttpResponse("Stored at", status_code=200)
