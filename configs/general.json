@@ -1,0 +1,28 @@
+{
+  "dev": {
+    "ip": "10.100.60.130",
+    "port": [9082],
+    "user": "maxauth",
+    "key": "bWF4YWRtaW46MTIzNDU2",
+    "endpoint": "maxtest/oslc/os",
+    "scheme": "http"
+  },
+  "prod": {
+    "ip": "10.100.62.26",
+    "port": [80, 9080, 9081],
+    "user": "maxauth",
+    "key": "bWF4YWRtaW46U3B2YkAxMjM=",
+    "endpoint": "maximo/oslc/os",
+    "scheme": "http"
+  },
+  "storage": {
+    "DefaultEndpointsProtocol": "https",
+    "AccountName": "spvbstoragedevv2",
+    "AccountKey": "mnql8TSM53Myn/rHlSiVMTSpXz9zL1oUnv3U8tIvtVIsHRELVjMPjwRU2qj58V7w+zevlopk8X2vrqxqb+OSUA==",
+    "EndpointSuffix": "core.windows.net"
+  },
+  "params": {
+    "env": "dev",
+    "names": "all"
+  }
+}
